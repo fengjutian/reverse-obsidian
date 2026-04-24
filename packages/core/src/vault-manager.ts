@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, join, relative } from "node:path";
 import type { NoteMeta } from "@ekm/shared-types";
 import type { VaultManager } from "./interfaces.js";
@@ -36,6 +36,12 @@ export class LocalVaultManager implements VaultManager {
     await mkdir(dirname(fullPath), { recursive: true });
     await writeFile(fullPath, content, "utf8");
   }
+
+  async deleteNote(path: string): Promise<void> {
+    const fullPath = join(this.notesRoot, path);
+    await rm(fullPath, { force: true });
+  }
+
 
   async collectNoteMeta(): Promise<NoteMeta[]> {
     const notePaths = await this.listNotes();

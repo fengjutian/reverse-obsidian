@@ -57,6 +57,13 @@ function registerIpcHandlers() {
     await links.updateByPath(path);
   });
 
+  ipcMain.handle(IPC_CHANNELS.noteDelete, async (_event, path: string) => {
+    await vault.deleteNote(path);
+    await links.updateByPath(path);
+    await search.updateByPath(path);
+  });
+
+
   ipcMain.handle(IPC_CHANNELS.noteRender, async (_event, markdown: string) => {
     return renderMarkdownWithWikiLink(markdown);
   });

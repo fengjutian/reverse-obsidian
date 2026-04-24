@@ -5,7 +5,9 @@ export interface VaultManager {
   listNotes(): Promise<string[]>;
   readNote(path: string): Promise<string>;
   writeNote(path: string, content: string): Promise<void>;
+  deleteNote(path: string): Promise<void>;
 }
+
 
 export interface LinkIndex {
   rebuild(): Promise<void>;

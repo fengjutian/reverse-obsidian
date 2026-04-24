@@ -9,18 +9,37 @@
   <body>
     <main class="app-shell">
       <aside class="pane left-pane">
-        <div class="pane-header">Vault</div>
-        <input id="search-input" class="search-input" placeholder="Search notes..." />
+        <div class="pane-header-row">
+          <div class="pane-header">Vault</div>
+          <button id="cmd-btn" class="ghost-btn" title="Ctrl/Cmd + P">⌘P</button>
+        </div>
+        <input id="search-input" class="search-input" placeholder="过滤文件..." />
         <ul id="note-list" class="note-list"></ul>
+
+        <div id="context-menu" class="context-menu hidden" role="menu">
+          <button data-action="open" role="menuitem">打开</button>
+          <button data-action="rename" role="menuitem">重命名</button>
+          <button data-action="move" role="menuitem">移动</button>
+          <button data-action="delete" role="menuitem">删除</button>
+        </div>
       </aside>
+
+
+      <div class="gutter gutter-left" aria-label="调整侧栏宽度" role="separator"></div>
 
       <section class="pane center-pane">
         <header class="editor-toolbar">
           <input id="note-path" class="path-input" placeholder="notes/demo.md" />
-          <button id="save-btn" class="btn">保存</button>
+          <div class="toolbar-actions">
+            <button id="new-note-btn" class="btn" title="新建 (Ctrl+N)">新建</button>
+            <button id="save-btn" class="btn" title="保存 (Ctrl+S)">保存</button>
+            <button id="mode-toggle-btn" class="btn ghost-btn" title="切换视图 (Ctrl+E)">分屏</button>
+          </div>
         </header>
         <textarea id="editor" class="editor" placeholder="写点内容，试试 [[WikiLink]]..."></textarea>
       </section>
+
+      <div class="gutter gutter-right" aria-label="调整预览栏宽度" role="separator"></div>
 
       <aside class="pane right-pane">
         <section class="card">
@@ -31,8 +50,20 @@
           <div class="card-title">Backlinks</div>
           <ul id="backlinks" class="backlinks"></ul>
         </section>
+        <section class="card">
+          <div class="card-title">Search</div>
+          <input id="search-global-input" class="search-input" placeholder="全局搜索 (Ctrl+Shift+F)" />
+          <ul id="search-results" class="search-results"></ul>
+        </section>
       </aside>
     </main>
+
+    <section id="command-palette" class="palette hidden" role="dialog" aria-modal="true">
+      <div class="palette-panel">
+        <input id="palette-input" class="palette-input" placeholder="输入文件名快速打开..." />
+        <ul id="palette-list" class="palette-list"></ul>
+      </div>
+    </section>
 
     <script type="module" src="./index.js"></script>
   </body>
