@@ -1,0 +1,19 @@
+{
+  "name": "reverse-obsidian",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Enterprise Knowledge Management MVP monorepo",
+  "packageManager": "pnpm@9.12.3",
+  "scripts": {
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "dev": "pnpm --filter @ekm/desktop dev"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
+
+

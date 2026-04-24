@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>EKM Desktop</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="pane left-pane">
+        <div class="pane-header">Vault</div>
+        <input id="search-input" class="search-input" placeholder="Search notes..." />
+        <ul id="note-list" class="note-list"></ul>
+      </aside>
+
+      <section class="pane center-pane">
+        <header class="editor-toolbar">
+          <input id="note-path" class="path-input" placeholder="notes/demo.md" />
+          <button id="save-btn" class="btn">保存</button>
+        </header>
+        <textarea id="editor" class="editor" placeholder="写点内容，试试 [[WikiLink]]..."></textarea>
+      </section>
+
+      <aside class="pane right-pane">
+        <section class="card">
+          <div class="card-title">Preview</div>
+          <article id="preview" class="preview"></article>
+        </section>
+        <section class="card">
+          <div class="card-title">Backlinks</div>
+          <ul id="backlinks" class="backlinks"></ul>
+        </section>
+      </aside>
+    </main>
+
+    <script type="module" src="./index.js"></script>
+  </body>
+</html>
