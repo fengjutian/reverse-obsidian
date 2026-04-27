@@ -66,6 +66,10 @@ const api: DesktopApi = {
     validate(LimitSchema, limit);
     return ipcRenderer.invoke(IPC_CHANNELS.searchQuery, keyword, limit);
   },
+
+  // workspace:*
+  saveWorkspaceState: (state) => ipcRenderer.invoke(IPC_CHANNELS.workspaceSave, state),
+  loadWorkspaceState: () => ipcRenderer.invoke(IPC_CHANNELS.workspaceLoad),
 };
 
 contextBridge.exposeInMainWorld("ekm", api);

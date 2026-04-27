@@ -1,85 +1,115 @@
-import Database from "better-sqlite3";
-import { existsSync, unlinkSync } from "fs";
-import { randomUUID } from "crypto";
+import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
 
+// sql.js is a CJS module — use createRequire for ESM compatibility
+const require = createRequire(import.meta.url);
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const initSqlJs = require("sql.js") as (config?: object) => Promise<{ Database: new (data?: Buffer | Uint8Array) => SqlJsDb }>;
+
+interface SqlJsDb {
+  run(sql: string, params?: unknown[]): void;
+  exec(sql: string, params?: unknown[]): Array<{ columns: string[]; values: unknown[][] }>;
+  export(): Uint8Array;
+  close(): void;
+}
+
+/**
+ * VaultDatabase — local SQLite metadata store backed by sql.js (pure WASM).
+ * No native compilation required.
+ */
 export class VaultDatabase {
-  private db: Database.Database | null = null;
+  private db: SqlJsDb | null = null;
 
   constructor(private readonly dbPath: string) {}
 
-  open(): void {
-    this.db = new Database(this.dbPath);
-    this.db.pragma("journal_mode = WAL");
-    this.db.pragma("foreign_keys = ON");
+  /** Open (or create) the database, run integrity check, apply migrations. */
+  async open(): Promise<void> {
+    const SQL = await initSqlJs();
 
-    // Integrity check — rebuild if corrupted
-    const rows = this.db.pragma("integrity_check") as Array<{ integrity_check: string }>;
-    const isOk = rows.length === 1 && rows[0].integrity_check === "ok";
-    if (!isOk) {
+    let data: Buffer | undefined;
+    if (existsSync(this.dbPath)) {
+      data = readFileSync(this.dbPath);
+    }
+
+    try {
+      this.db = new SQL.Database(data);
+    } catch {
+      // Corrupted — delete and recreate
+      if (existsSync(this.dbPath)) unlinkSync(this.dbPath);
+      this.db = new SQL.Database();
+    }
+
+    // Integrity check
+    const result = this.db.exec("PRAGMA integrity_check");
+    const ok = result[0]?.values?.[0]?.[0] === "ok";
+    if (!ok) {
       this.db.close();
-      this.db = null;
-      if (existsSync(this.dbPath)) {
-        unlinkSync(this.dbPath);
-      }
-      this.db = new Database(this.dbPath);
-      this.db.pragma("journal_mode = WAL");
-      this.db.pragma("foreign_keys = ON");
+      if (existsSync(this.dbPath)) unlinkSync(this.dbPath);
+      this.db = new SQL.Database();
     }
 
     this._migrate();
+    this._persist();
   }
 
   close(): void {
-    this.db?.close();
-    this.db = null;
+    if (this.db) {
+      this._persist();
+      this.db.close();
+      this.db = null;
+    }
   }
 
-  private get conn(): Database.Database {
-    if (!this.db) throw new Error("Database is not open");
+  private get conn(): SqlJsDb {
+    if (!this.db) throw new Error("Database is not open. Call open() first.");
     return this.db;
   }
 
+  private _persist(): void {
+    if (!this.db) return;
+    const data = this.db.export();
+    mkdirSync(dirname(this.dbPath), { recursive: true });
+    writeFileSync(this.dbPath, Buffer.from(data));
+  }
+
   private _migrate(): void {
-    this.conn.exec(`
+    this.conn.run(`
       CREATE TABLE IF NOT EXISTS notes (
         id TEXT PRIMARY KEY,
-        workspace_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL DEFAULT '',
         path TEXT NOT NULL UNIQUE,
         title TEXT NOT NULL,
         hash TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
-
       CREATE TABLE IF NOT EXISTS links (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        workspace_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL DEFAULT '',
         source_path TEXT NOT NULL,
         target_path TEXT NOT NULL,
         relation TEXT NOT NULL DEFAULT 'reference',
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
-
       CREATE TABLE IF NOT EXISTS tags (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        workspace_id TEXT NOT NULL,
+        workspace_id TEXT NOT NULL DEFAULT '',
         name TEXT NOT NULL,
         UNIQUE(workspace_id, name)
       );
-
       CREATE TABLE IF NOT EXISTS note_tags (
         note_id TEXT NOT NULL,
         tag_id INTEGER NOT NULL,
         PRIMARY KEY (note_id, tag_id)
       );
-
       CREATE TABLE IF NOT EXISTS embeddings (
         note_id TEXT PRIMARY KEY,
         vector BLOB NOT NULL,
         model TEXT NOT NULL,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
-
       CREATE TABLE IF NOT EXISTS index_state (
         workspace_id TEXT PRIMARY KEY,
         last_scan_at TEXT NOT NULL,
@@ -91,113 +121,85 @@ export class VaultDatabase {
   // ── Notes ──────────────────────────────────────────────────────────────────
 
   upsertNote(meta: { path: string; title: string; hash: string; workspaceId: string }): void {
-    const stmt = this.conn.prepare(`
-      INSERT INTO notes (id, workspace_id, path, title, hash, updated_at)
-      VALUES (@id, @workspaceId, @path, @title, @hash, datetime('now'))
-      ON CONFLICT(path) DO UPDATE SET
-        title = excluded.title,
-        hash = excluded.hash,
-        updated_at = excluded.updated_at
-    `);
-    this.transaction(() => stmt.run({ id: randomUUID(), ...meta }));
+    this.conn.run(
+      `INSERT INTO notes (id, workspace_id, path, title, hash, updated_at)
+       VALUES (?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(path) DO UPDATE SET title=excluded.title, hash=excluded.hash, updated_at=excluded.updated_at`,
+      [randomUUID(), meta.workspaceId, meta.path, meta.title, meta.hash]
+    );
+    this._persist();
   }
 
   deleteNote(path: string): void {
-    const stmt = this.conn.prepare("DELETE FROM notes WHERE path = ?");
-    this.transaction(() => stmt.run(path));
+    this.conn.run("DELETE FROM notes WHERE path = ?", [path]);
+    this._persist();
   }
 
   // ── Links ──────────────────────────────────────────────────────────────────
 
   upsertLinks(sourcePath: string, links: Array<{ targetPath: string; relation: string }>): void {
-    const del = this.conn.prepare("DELETE FROM links WHERE source_path = ?");
-    const ins = this.conn.prepare(
-      "INSERT INTO links (workspace_id, source_path, target_path, relation) VALUES ('', ?, ?, ?)"
-    );
-    this.transaction(() => {
-      del.run(sourcePath);
-      for (const link of links) {
-        ins.run(sourcePath, link.targetPath, link.relation);
-      }
-    });
+    this.conn.run("DELETE FROM links WHERE source_path = ?", [sourcePath]);
+    for (const link of links) {
+      this.conn.run(
+        "INSERT INTO links (workspace_id, source_path, target_path, relation) VALUES ('', ?, ?, ?)",
+        [sourcePath, link.targetPath, link.relation]
+      );
+    }
+    this._persist();
   }
 
   deleteLinks(sourcePath: string): void {
-    const stmt = this.conn.prepare("DELETE FROM links WHERE source_path = ?");
-    this.transaction(() => stmt.run(sourcePath));
+    this.conn.run("DELETE FROM links WHERE source_path = ?", [sourcePath]);
+    this._persist();
   }
 
   getBacklinks(targetPath: string): string[] {
-    const rows = this.conn
-      .prepare("SELECT source_path FROM links WHERE target_path = ?")
-      .all(targetPath) as Array<{ source_path: string }>;
-    return rows.map((r) => r.source_path);
+    const result = this.conn.exec("SELECT source_path FROM links WHERE target_path = ?", [targetPath]);
+    return (result[0]?.values ?? []).map((row) => row[0] as string);
   }
 
   getAllLinks(): Array<{ sourcePath: string; targetPath: string; relation: string }> {
-    const rows = this.conn
-      .prepare("SELECT source_path, target_path, relation FROM links")
-      .all() as Array<{ source_path: string; target_path: string; relation: string }>;
-    return rows.map((r) => ({
-      sourcePath: r.source_path,
-      targetPath: r.target_path,
-      relation: r.relation,
+    const result = this.conn.exec("SELECT source_path, target_path, relation FROM links");
+    return (result[0]?.values ?? []).map((row) => ({
+      sourcePath: row[0] as string,
+      targetPath: row[1] as string,
+      relation: row[2] as string,
     }));
-  }
-
-  // ── Tags ───────────────────────────────────────────────────────────────────
-
-  upsertTags(notePath: string, tags: string[]): void {
-    const noteRow = this.conn
-      .prepare("SELECT id, workspace_id FROM notes WHERE path = ?")
-      .get(notePath) as { id: string; workspace_id: string } | undefined;
-    if (!noteRow) return;
-
-    const delNT = this.conn.prepare("DELETE FROM note_tags WHERE note_id = ?");
-    const insTag = this.conn.prepare(
-      "INSERT OR IGNORE INTO tags (workspace_id, name) VALUES (?, ?)"
-    );
-    const getTag = this.conn.prepare(
-      "SELECT id FROM tags WHERE workspace_id = ? AND name = ?"
-    );
-    const insNT = this.conn.prepare(
-      "INSERT OR IGNORE INTO note_tags (note_id, tag_id) VALUES (?, ?)"
-    );
-
-    this.transaction(() => {
-      delNT.run(noteRow.id);
-      for (const tag of tags) {
-        insTag.run(noteRow.workspace_id, tag);
-        const tagRow = getTag.get(noteRow.workspace_id, tag) as { id: number };
-        insNT.run(noteRow.id, tagRow.id);
-      }
-    });
   }
 
   // ── Index state ────────────────────────────────────────────────────────────
 
   getIndexState(workspaceId: string): { lastScanAt: string; lastEventId: string } | null {
-    const row = this.conn
-      .prepare("SELECT last_scan_at, last_event_id FROM index_state WHERE workspace_id = ?")
-      .get(workspaceId) as { last_scan_at: string; last_event_id: string } | undefined;
+    const result = this.conn.exec(
+      "SELECT last_scan_at, last_event_id FROM index_state WHERE workspace_id = ?",
+      [workspaceId]
+    );
+    const row = result[0]?.values?.[0];
     if (!row) return null;
-    return { lastScanAt: row.last_scan_at, lastEventId: row.last_event_id };
+    return { lastScanAt: row[0] as string, lastEventId: row[1] as string };
   }
 
   setIndexState(workspaceId: string, lastScanAt: string, lastEventId: string): void {
-    const stmt = this.conn.prepare(`
-      INSERT INTO index_state (workspace_id, last_scan_at, last_event_id)
-      VALUES (?, ?, ?)
-      ON CONFLICT(workspace_id) DO UPDATE SET
-        last_scan_at = excluded.last_scan_at,
-        last_event_id = excluded.last_event_id
-    `);
-    this.transaction(() => stmt.run(workspaceId, lastScanAt, lastEventId));
+    this.conn.run(
+      `INSERT INTO index_state (workspace_id, last_scan_at, last_event_id) VALUES (?, ?, ?)
+       ON CONFLICT(workspace_id) DO UPDATE SET last_scan_at=excluded.last_scan_at, last_event_id=excluded.last_event_id`,
+      [workspaceId, lastScanAt, lastEventId]
+    );
+    this._persist();
   }
 
   // ── Transaction helper ─────────────────────────────────────────────────────
 
   transaction<T>(fn: () => T): T {
-    return this.conn.transaction(fn)();
+    this.conn.run("BEGIN");
+    try {
+      const result = fn();
+      this.conn.run("COMMIT");
+      this._persist();
+      return result;
+    } catch (err) {
+      this.conn.run("ROLLBACK");
+      throw err;
+    }
   }
 }

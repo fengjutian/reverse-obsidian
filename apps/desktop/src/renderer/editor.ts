@@ -118,19 +118,19 @@ export class MarkdownEditor {
     });
   }
 
-  // Task 8.4: load vim mode dynamically
-  private loadVimMode(extensions: Extension[]): void {
-    // @codemirror/vim is imported dynamically; push a placeholder that will be
-    // replaced once the async import resolves. For synchronous construction we
-    // use a StateEffect-based reconfigure approach after the view is created.
-    import("@codemirror/vim").then(({ vim }) => {
-      if (this.view) {
+  // Task 8.4: load vim mode dynamically (requires @replit/codemirror-vim to be installed)
+  private loadVimMode(_extensions: Extension[]): void {
+    // Dynamically import vim extension — silently skip if not installed
+    // Install with: pnpm add @replit/codemirror-vim
+    const vimPkg = "@replit/codemirror-vim";
+    import(/* @vite-ignore */ vimPkg).then((mod: { vim?: () => unknown }) => {
+      if (this.view && typeof mod.vim === "function") {
         this.view.dispatch({
-          effects: StateEffect.appendConfig.of(vim()),
+          effects: StateEffect.appendConfig.of(mod.vim() as Extension),
         });
       }
     }).catch(() => {
-      // vim package not installed – silently skip
+      // vim package not installed — silently skip
     });
   }
 

@@ -119,17 +119,17 @@
   - [x] 8.6 实现 Frontmatter 解析与属性面板展示
     - _Requirements: 2.9_
 
-- [ ] 9. 实现全文搜索系统
-  - [-] 9.1 实现 `packages/search/src/search-engine.ts`，集成 FlexSearch
+- [x] 9. 实现全文搜索系统
+  - [x] 9.1 实现 `packages/search/src/search-engine.ts`，集成 FlexSearch
     - 索引笔记内容、标题、Tags、Frontmatter 字段
     - 支持查询运算符：`AND`、`OR`、`NOT`、`"短语"`、`field:value`、`tag:name`、`path:folder`、`/regex/`
     - 10,000 Notes 规模下查询响应 < 500ms
     - _Requirements: 6.1, 6.2, 6.3, 6.5_
-  - [ ] 9.2 实现搜索结果高亮与排序（相关度、修改时间、创建时间）
+  - [x] 9.2 实现搜索结果高亮与排序（相关度、修改时间、创建时间）
     - _Requirements: 6.4, 6.8_
-  - [ ] 9.3 实现文件变更后 2 秒内增量更新搜索索引
+  - [x] 9.3 实现文件变更后 2 秒内增量更新搜索索引
     - _Requirements: 6.6_
-  - [ ] 9.4 实现 Quick_Switcher 组件（Ctrl+O），模糊搜索笔记标题，50ms 内返回结果
+  - [x] 9.4 实现 Quick_Switcher 组件（Ctrl+O），模糊搜索笔记标题，50ms 内返回结果
     - _Requirements: 16.2_
 
 - [ ] 10. 实现 Graph View 图谱视图
