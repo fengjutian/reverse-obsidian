@@ -27,9 +27,11 @@ declare global {
 }
 
 
+import { MarkdownEditor } from "./editor.js";
+
 const noteListEl = document.querySelector<HTMLUListElement>("#note-list");
 const notePathInput = document.querySelector<HTMLInputElement>("#note-path");
-const editorEl = document.querySelector<HTMLTextAreaElement>("#editor");
+const editorEl = document.querySelector<HTMLDivElement>("#editor");
 const saveBtn = document.querySelector<HTMLButtonElement>("#save-btn");
 const newNoteBtn = document.querySelector<HTMLButtonElement>("#new-note-btn");
 const searchInput = document.querySelector<HTMLInputElement>("#search-input");
@@ -58,6 +60,8 @@ let contextMenuTargetPath: string | null = null;
 
 type ViewMode = "split" | "edit" | "preview";
 let viewMode: ViewMode = "split";
+
+let markdownEditor: MarkdownEditor | null = null;
 
 function setViewMode(mode: ViewMode) {
   viewMode = mode;
@@ -197,7 +201,9 @@ async function openNote(path: string) {
   activePath = path;
   const content = await window.ekm.readNote(path);
   if (notePathInput) notePathInput.value = path;
-  if (editorEl) editorEl.value = content;
+  if (markdownEditor) {
+    markdownEditor.setValue(content);
+  }
   await Promise.all([refreshPreview(), refreshBacklinks(path)]);
   renderTree();
 }
@@ -209,7 +215,7 @@ async function saveNote() {
     return;
   }
 
-  const content = editorEl?.value ?? "";
+  const content = markdownEditor?.getValue() ?? "";
   await window.ekm.writeNote(path, content);
   activePath = path;
   await Promise.all([refreshNotes(), refreshPreview(), refreshBacklinks(path)]);
@@ -277,12 +283,21 @@ function setupPreviewLinkNavigation() {
 }
 
 function setupEditorLivePreview() {
-  editorEl?.addEventListener("input", () => {
-    if (previewTimer) window.clearTimeout(previewTimer);
-    previewTimer = window.setTimeout(() => {
-      refreshPreview().catch((error) => console.error(error));
-    }, 120);
-  });
+  if (editorEl && !markdownEditor) {
+    markdownEditor = new MarkdownEditor({
+      parent: editorEl,
+      value: "",
+      onChange: () => {
+        if (previewTimer) window.clearTimeout(previewTimer);
+        previewTimer = window.setTimeout(() => {
+          refreshPreview().catch((error) => console.error(error));
+        }, 300);
+      },
+      onSave: () => {
+        saveNote().catch((error) => console.error(error));
+      },
+    });
+  }
 }
 
 function setupSearchFilter() {
@@ -324,7 +339,7 @@ async function deleteNote(path: string) {
   await refreshNotes();
   if (activePath === path) {
     activePath = "";
-    if (editorEl) editorEl.value = "";
+    if (markdownEditor) markdownEditor.setValue("");
     if (previewEl) previewEl.innerHTML = "";
     if (backlinksEl) backlinksEl.innerHTML = "";
   }
@@ -633,6 +648,9 @@ function setupGutters() {
 
 
 
+setupGutters();
+setupEditorLivePreview();
+
 refreshNotes()
   .then(async () => {
     if (allNotes.length > 0) {
@@ -641,7 +659,10 @@ refreshNotes()
     }
 
     if (notePathInput) notePathInput.value = "inbox/first-note.md";
-    if (editorEl) editorEl.value = "# Welcome\n\n现在支持目录树和命令面板（Ctrl/Cmd+P）。\n\n试试创建 [[second-note]]。";
+    const welcomeContent = "# Welcome\n\n现在支持目录树和命令面板（Ctrl/Cmd+P）。\n\n试试创建 [[second-note]]。";
+    if (markdownEditor) {
+      markdownEditor.setValue(welcomeContent);
+    }
     await refreshPreview();
     await refreshBacklinks("inbox/first-note.md");
   })

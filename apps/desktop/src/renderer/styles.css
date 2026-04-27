@@ -138,12 +138,30 @@ body {
 .note-item.active,
 .note-item:hover,
 .folder-toggle:hover { border-color: var(--accent); }
-.editor {
-  resize: none;
+.editor-container {
   height: 100%;
   min-height: 320px;
+  overflow: hidden;
+}
+
+.editor-container .cm-editor {
+  height: 100%;
   font-family: "JetBrains Mono", Consolas, monospace;
+  font-size: 14px;
   line-height: 1.6;
+}
+
+.editor-container .cm-scroller {
+  overflow: auto;
+}
+
+.editor-container .cm-content {
+  max-width: 100%;
+  padding: 8px;
+}
+
+.editor-container .cm-focused {
+  outline: none;
 }
 .right-pane {
   display: grid;
