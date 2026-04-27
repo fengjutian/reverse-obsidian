@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, join, relative } from "node:path";
-import type { NoteMeta, VaultConfig } from "@ekm/shared-types";
+import type { NoteMeta, VaultConfig, WorkspaceState } from "@ekm/shared-types";
 import type { VaultManager } from "./interfaces.js";
 import { normalizeToPosixPath, sha256, toTitleFromPath } from "./utils.js";
 
@@ -101,6 +101,23 @@ export class LocalVaultManager implements VaultManager {
     );
 
     return rows;
+  }
+
+  async saveWorkspaceState(state: WorkspaceState): Promise<void> {
+    const ekmDir = join(this.workspacePath, EKM_DIR);
+    await mkdir(ekmDir, { recursive: true });
+    await writeFile(join(ekmDir, "workspace.json"), JSON.stringify(state, null, 2), "utf8");
+  }
+
+  async loadWorkspaceState(): Promise<WorkspaceState | null> {
+    try {
+      const raw = await readFile(join(this.workspacePath, EKM_DIR, "workspace.json"), "utf8");
+      const parsed = JSON.parse(raw) as WorkspaceState;
+      if (!parsed.version || !parsed.layout || !Array.isArray(parsed.panes)) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
   }
 
   private async collectMarkdownFiles(root: string): Promise<string[]> {

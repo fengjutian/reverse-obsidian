@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import type { LinkEdge } from "@ekm/shared-types";
 import type { LinkIndex } from "./interfaces.js";
 import { normalizeToPosixPath } from "./utils.js";
@@ -6,10 +7,13 @@ import type { LocalVaultManager } from "./vault-manager.js";
 interface ParsedWikiLink {
   targetPath: string;
   alias?: string;
+  anchor?: string;   // heading anchor (e.g. #heading)
+  blockId?: string;  // block reference id (e.g. ^block-id)
   isEmbed: boolean;
 }
 
-const WIKILINK_PATTERN = /(!)?\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g;
+// Groups: (1) embed!, (2) target, (3) heading anchor, (4) block id, (5) alias
+const WIKILINK_PATTERN = /(!)?\[\[([^\]|#^]+)(?:#([^\]|^]+))?(?:\^([^\]|]+))?(?:\|([^\]]+))?\]\]/g;
 
 export class InMemoryLinkIndex implements LinkIndex {
   private edges: LinkEdge[] = [];
@@ -35,7 +39,14 @@ export class InMemoryLinkIndex implements LinkIndex {
       sources.delete(normalizedSource);
     }
 
-    const content = await this.vault.readNote(path);
+    let content: string;
+    try {
+      content = await this.vault.readNote(path);
+    } catch {
+      // File may have been deleted — clear its links and return
+      return;
+    }
+
     const links = parseWikiLinks(content);
 
     for (const link of links) {
@@ -53,6 +64,38 @@ export class InMemoryLinkIndex implements LinkIndex {
       }
       this.backlinks.get(edge.targetPath)?.add(edge.sourcePath);
     }
+  }
+
+  async renameAndUpdateLinks(oldPath: string, newPath: string): Promise<{ updatedCount: number }> {
+    const oldTitle = basename(oldPath, ".md");
+    const newTitle = basename(newPath, ".md");
+    const normalizedOld = normalizeToPosixPath(oldPath);
+
+    const backlinkSources = await this.getBacklinks(normalizedOld);
+    let updatedCount = 0;
+
+    for (const sourcePath of backlinkSources) {
+      let content: string;
+      try {
+        content = await this.vault.readNote(sourcePath);
+      } catch {
+        continue;
+      }
+      const updated = content.split(`[[${oldTitle}`).join(`[[${newTitle}`);
+      if (updated !== content) {
+        await this.vault.writeNote(sourcePath, updated);
+        updatedCount++;
+      }
+    }
+
+    await this.vault.renameNote(oldPath, newPath);
+    await this.updateByPath(newPath);
+
+    for (const sourcePath of backlinkSources) {
+      await this.updateByPath(sourcePath);
+    }
+
+    return { updatedCount };
   }
 
   async getBacklinks(path: string): Promise<string[]> {
@@ -74,12 +117,14 @@ export function parseWikiLinks(markdown: string): ParsedWikiLink[] {
   for (const match of matches) {
     const isEmbed = Boolean(match[1]);
     const rawTarget = match[2]?.trim();
-    const alias = match[3]?.trim();
+    const anchor = match[3]?.trim() || undefined;
+    const blockId = match[4]?.trim() || undefined;
+    const alias = match[5]?.trim() || undefined;
 
     if (!rawTarget) continue;
 
     const targetPath = rawTarget.endsWith(".md") ? rawTarget : `${rawTarget}.md`;
-    links.push({ targetPath, alias, isEmbed });
+    links.push({ targetPath, alias, anchor, blockId, isEmbed });
   }
 
   return links;

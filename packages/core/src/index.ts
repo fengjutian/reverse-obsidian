@@ -1,4 +1,5 @@
 export * from "./interfaces.js";
+export * from "./database.js";
 export * from "./vault-manager.js";
 export * from "./link-index.js";
 export * from "./search-engine.js";

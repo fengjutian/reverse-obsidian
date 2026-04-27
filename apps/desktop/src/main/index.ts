@@ -9,6 +9,7 @@ import {
   LocalVaultManager,
   renderMarkdownWithWikiLink
 } from "@ekm/core";
+import type { WorkspaceState } from "@ekm/shared-types";
 
 import { IPC_CHANNELS } from "../shared/ipc.js";
 import { assertWithinVault } from "./path-guard.js";
@@ -83,6 +84,24 @@ class WindowManager {
     const id = win.webContents.id;
     this.windows.set(id, { win, vaultPath, vault, links, search });
     this.pathIndex.set(vaultPath, id);
+
+    win.on("close", async () => {
+      // Save a minimal workspace state; the renderer should call workspace:save
+      // before this fires, but we ensure the file exists with a default.
+      const entry = this.windows.get(id);
+      if (entry) {
+        const existing = await entry.vault.loadWorkspaceState();
+        if (!existing) {
+          const defaultState: WorkspaceState = {
+            version: "1.0.0",
+            layout: "single",
+            panes: [],
+            savedAt: new Date().toISOString()
+          };
+          await entry.vault.saveWorkspaceState(defaultState).catch(() => undefined);
+        }
+      }
+    });
 
     win.on("closed", () => {
       this.windows.delete(id);
@@ -201,6 +220,19 @@ function registerIpcHandlers(manager: WindowManager): void {
     }
   });
 
+  ipcMain.handle(IPC_CHANNELS.noteRename, async (event: IpcMainInvokeEvent, oldPath: string, newPath: string) => {
+    try {
+      const entry = manager.getEntry(event.sender.id);
+      if (!entry) return { code: "E_NO_VAULT", message: "No vault open for this window" };
+      assertWithinVault(entry.vault.notesRoot, oldPath);
+      assertWithinVault(entry.vault.notesRoot, newPath);
+      return await entry.links.renameAndUpdateLinks(oldPath, newPath);
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "code" in err) return err;
+      return { code: "E_RENAME_FAILED", message: String(err), details: err };
+    }
+  });
+
   ipcMain.handle(IPC_CHANNELS.noteRender, async (_event, markdown: string) => {
     return renderMarkdownWithWikiLink(markdown);
   });
@@ -215,6 +247,18 @@ function registerIpcHandlers(manager: WindowManager): void {
     const entry = manager.getEntry(event.sender.id);
     if (!entry) return [];
     return entry.search.query(keyword, limit);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.workspaceSave, async (event: IpcMainInvokeEvent, state: WorkspaceState) => {
+    const entry = manager.getEntry(event.sender.id);
+    if (!entry) return;
+    await entry.vault.saveWorkspaceState(state);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.workspaceLoad, async (event: IpcMainInvokeEvent) => {
+    const entry = manager.getEntry(event.sender.id);
+    if (!entry) return null;
+    return entry.vault.loadWorkspaceState();
   });
 }
 

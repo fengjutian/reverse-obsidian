@@ -33,18 +33,18 @@
     - **Property 4: 权限安全性（P4）** — 任意构造的路径穿越请求均被拒绝
     - **Validates: Requirements 10.4**
 
-- [ ] 3. 实现本地文件系统与 Vault 管理
+- [x] 3. 实现本地文件系统与 Vault 管理
   - [x] 3.1 实现 `packages/core/src/vault-manager.ts` 中的 `VaultManager` 类
     - `open(path)`: 检测 `.ekm/` 目录，不存在则初始化；已存在则直接打开
     - `listNotes()`: 递归扫描 `.md` 文件，返回相对路径列表
     - `readNote(path)` / `writeNote(path, content)`: 原子写入（临时文件 + rename）
     - 持久化最近打开 Vault 列表（最多 20 条）到 `~/.ekm/recent.json`
     - _Requirements: 1.1, 1.2, 1.4, 1.5, 9.1, 9.2, 9.4_
-  - [-] 3.2 实现文件系统监听器 `packages/core/src/file-watcher.ts`
+  - [x] 3.2 实现文件系统监听器 `packages/core/src/file-watcher.ts`
     - 使用 `chokidar` 监听 Vault 目录变更，聚合去抖（100~300ms）
     - 变更事件触发 LinkIndex 增量更新与 SearchEngine 索引更新
     - _Requirements: 9.3, 6.6_
-  - [~] 3.3 实现 Vault 关闭时持久化编辑器状态到 `.ekm/workspace.json`
+  - [x] 3.3 实现 Vault 关闭时持久化编辑器状态到 `.ekm/workspace.json`
     - 保存当前打开的 Tab 列表、分屏布局、滚动位置
     - 下次打开时恢复状态
     - _Requirements: 1.6, 21.5_
@@ -52,8 +52,8 @@
     - 测试初始化、重复打开、文件读写、路径规范化等边界情况
     - _Requirements: 1.2, 1.4, 9.4_
 
-- [ ] 4. 实现本地 SQLite 数据库层
-  - [~] 4.1 实现 `packages/core/src/database.ts`，封装 `better-sqlite3`
+- [x] 4. 实现本地 SQLite 数据库层
+  - [x] 4.1 实现 `packages/core/src/database.ts`，封装 `better-sqlite3`
     - 建表：`notes`、`links`、`tags`、`note_tags`、`embeddings`、`index_state`
     - 所有写操作包裹在事务中，保证原子性
     - 启动时检测数据库完整性（`PRAGMA integrity_check`），损坏则删除并重建
@@ -62,15 +62,15 @@
     - **Property 5: 数据耐久性（P5）** — 写入确认后模拟崩溃，重启后数据完整
     - **Validates: Requirements 17.5**
 
-- [ ] 5. 实现双向链接索引系统
-  - [~] 5.1 实现 `packages/core/src/link-index.ts` 中的 `LinkIndex` 类
+- [x] 5. 实现双向链接索引系统
+  - [x] 5.1 实现 `packages/core/src/link-index.ts` 中的 `LinkIndex` 类
     - `rebuild()`: 全量扫描所有 `.md` 文件，解析 WikiLink 语法，写入 `links` 表
     - `updateByPath(path)`: 增量更新单个文件的链接关系
     - `getBacklinks(path)`: 查询指向目标文件的所有来源
     - 支持 `[[目标]]`、`[[目标|别名]]`、`[[目标#标题]]`、`[[目标^block-id]]`、`![[嵌入]]` 语法
     - Vault 打开时 10,000 Notes 内 5 秒完成全量构建
     - _Requirements: 1.3, 4.1, 4.2, 4.5, 4.6, 4.7_
-  - [~] 5.2 实现笔记重命名时自动更新所有 WikiLink 引用
+  - [x] 5.2 实现笔记重命名时自动更新所有 WikiLink 引用
     - 重命名后 3 秒内完成 10,000 Notes 规模的全量引用更新
     - _Requirements: 4.4, 9.4_
   - [ ]* 5.3 为 LinkIndex 编写属性测试
@@ -80,11 +80,11 @@
     - **Property 2: 引用可逆性（P2）** — 若 A 链接 B，则 `getBacklinks(B)` 必然包含 A
     - **Validates: Requirements 4.3, 4.8**
 
-- [~] 6. Checkpoint — 确保所有测试通过
+- [x] 6. Checkpoint — 确保所有测试通过
   - 确保所有测试通过，如有问题请向用户提问。
 
 - [ ] 7. 实现 Markdown 解析与渲染引擎
-  - [~] 7.1 实现 `packages/markdown/src/parser.ts`，基于 `unified/remark` 构建 Markdown AST 处理管线
+  - [-] 7.1 实现 `packages/markdown/src/parser.ts`，基于 `unified/remark` 构建 Markdown AST 处理管线
     - 支持 CommonMark + 扩展：表格、任务列表、脚注、数学（KaTeX）、代码高亮（highlight.js）、Mermaid
     - 实现 WikiLink / Embed / Callout 自定义 remark 插件
     - _Requirements: 2.4, 3.1, 3.2, 3.3, 3.5, 3.6_

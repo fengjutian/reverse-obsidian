@@ -46,6 +46,11 @@ const api: DesktopApi = {
     validate(PathSchema, path);
     return ipcRenderer.invoke(IPC_CHANNELS.noteDelete, path);
   },
+  renameNote: (oldPath, newPath) => {
+    validate(PathSchema, oldPath);
+    validate(PathSchema, newPath);
+    return ipcRenderer.invoke(IPC_CHANNELS.noteRename, oldPath, newPath);
+  },
   renderNote: (markdown) => {
     validate(ContentSchema, markdown);
     return ipcRenderer.invoke(IPC_CHANNELS.noteRender, markdown);

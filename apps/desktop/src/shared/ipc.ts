@@ -6,9 +6,12 @@ export const IPC_CHANNELS = {
   noteRead: "note:read",
   noteWrite: "note:write",
   noteDelete: "note:delete",
+  noteRename: "note:rename",
   noteRender: "note:render",
   noteBacklinks: "note:backlinks",
-  searchQuery: "search:query"
+  searchQuery: "search:query",
+  workspaceSave: "workspace:save",
+  workspaceLoad: "workspace:load"
 } as const;
 
 export interface DesktopApi {
@@ -21,6 +24,7 @@ export interface DesktopApi {
   readNote(path: string): Promise<string>;
   writeNote(path: string, content: string): Promise<void>;
   deleteNote(path: string): Promise<void>;
+  renameNote(oldPath: string, newPath: string): Promise<{ updatedCount: number }>;
   renderNote(markdown: string): Promise<string>;
   getBacklinks(path: string): Promise<string[]>;
   // search:*
@@ -32,6 +36,9 @@ export interface DesktopApi {
       snippet: string;
     }>
   >;
+  // workspace:*
+  saveWorkspaceState(state: import("@ekm/shared-types").WorkspaceState): Promise<void>;
+  loadWorkspaceState(): Promise<import("@ekm/shared-types").WorkspaceState | null>;
 }
 
 

@@ -10,6 +10,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@ekm/shared-types": "workspace:*"
+    "@ekm/shared-types": "workspace:*",
+    "better-sqlite3": "^9.4.3"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.8"
   }
 }

@@ -1,4 +1,4 @@
-import type { SearchResult } from "@ekm/shared-types";
+import type { SearchResult, WorkspaceState } from "@ekm/shared-types";
 
 export interface VaultManager {
   open(workspacePath: string): Promise<void>;
@@ -7,6 +7,8 @@ export interface VaultManager {
   writeNote(path: string, content: string): Promise<void>;
   deleteNote(path: string): Promise<void>;
   renameNote(oldPath: string, newPath: string): Promise<void>;
+  saveWorkspaceState(state: WorkspaceState): Promise<void>;
+  loadWorkspaceState(): Promise<WorkspaceState | null>;
 }
 
 
