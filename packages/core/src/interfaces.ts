@@ -6,6 +6,7 @@ export interface VaultManager {
   readNote(path: string): Promise<string>;
   writeNote(path: string, content: string): Promise<void>;
   deleteNote(path: string): Promise<void>;
+  renameNote(oldPath: string, newPath: string): Promise<void>;
 }
 
 

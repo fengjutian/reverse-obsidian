@@ -10,22 +10,22 @@
 
 ## Tasks
 
-- [~] 1. 初始化 Monorepo 项目结构与共享类型
+- [x] 1. 初始化 Monorepo 项目结构与共享类型
   - 配置 pnpm workspaces + Turborepo，创建 `apps/desktop`、`apps/server`、`packages/core`、`packages/shared-types`、`packages/markdown`、`packages/graph`、`packages/search`、`packages/sync`、`packages/plugin-sdk` 目录骨架
   - 在 `packages/shared-types/src/index.ts` 中定义核心 TypeScript 接口：`VaultManager`、`LinkIndex`、`SearchEngine`、`Note`、`LinkEdge`、`SearchResult`、`PluginManifest`、`IpcChannel`
   - 配置 `tsconfig.base.json` 与各包的 `tsconfig.json`，启用严格模式
   - 配置 Vitest 测试框架与 fast-check 属性测试库
   - _Requirements: 9.1, 9.2, 10.1, 10.2_
 
-- [ ] 2. 实现 Electron 主进程与 IPC 安全架构
-  - [~] 2.1 实现 `apps/desktop/src/main/index.ts` 主进程入口，配置 `BrowserWindow` 参数：`contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`
+- [x] 2. 实现 Electron 主进程与 IPC 安全架构
+  - [x] 2.1 实现 `apps/desktop/src/main/index.ts` 主进程入口，配置 `BrowserWindow` 参数：`contextIsolation: true`、`nodeIntegration: false`、`sandbox: true`
     - 实现多窗口管理，支持同时打开多个 Vault 实例
     - _Requirements: 10.1, 10.5_
-  - [~] 2.2 实现 `apps/desktop/src/preload/index.ts`，通过 `contextBridge.exposeInMainWorld` 暴露白名单 IPC API
+  - [x] 2.2 实现 `apps/desktop/src/preload/index.ts`，通过 `contextBridge.exposeInMainWorld` 暴露白名单 IPC API
     - 定义 `vault:*`、`note:*`、`search:*`、`plugin:*`、`sync:*` 通道类型
     - 使用 Zod 对所有 IPC 消息进行 Schema 校验
     - _Requirements: 10.2, 10.3_
-  - [~] 2.3 在主进程实现 IPC 路径安全校验中间件
+  - [x] 2.3 在主进程实现 IPC 路径安全校验中间件
     - 文件读写请求必须验证路径在当前 Vault 目录内（防路径穿越）
     - 统一错误返回结构：`{ code, message, details }`
     - _Requirements: 10.4_
@@ -34,13 +34,13 @@
     - **Validates: Requirements 10.4**
 
 - [ ] 3. 实现本地文件系统与 Vault 管理
-  - [~] 3.1 实现 `packages/core/src/vault-manager.ts` 中的 `VaultManager` 类
+  - [x] 3.1 实现 `packages/core/src/vault-manager.ts` 中的 `VaultManager` 类
     - `open(path)`: 检测 `.ekm/` 目录，不存在则初始化；已存在则直接打开
     - `listNotes()`: 递归扫描 `.md` 文件，返回相对路径列表
     - `readNote(path)` / `writeNote(path, content)`: 原子写入（临时文件 + rename）
     - 持久化最近打开 Vault 列表（最多 20 条）到 `~/.ekm/recent.json`
     - _Requirements: 1.1, 1.2, 1.4, 1.5, 9.1, 9.2, 9.4_
-  - [~] 3.2 实现文件系统监听器 `packages/core/src/file-watcher.ts`
+  - [-] 3.2 实现文件系统监听器 `packages/core/src/file-watcher.ts`
     - 使用 `chokidar` 监听 Vault 目录变更，聚合去抖（100~300ms）
     - 变更事件触发 LinkIndex 增量更新与 SearchEngine 索引更新
     - _Requirements: 9.3, 6.6_
