@@ -28,6 +28,7 @@ declare global {
 
 
 import { MarkdownEditor } from "./editor.js";
+import { MarkdownRenderer } from "./markdown-renderer.js";
 
 const noteListEl = document.querySelector<HTMLUListElement>("#note-list");
 const notePathInput = document.querySelector<HTMLInputElement>("#note-path");
@@ -62,6 +63,7 @@ type ViewMode = "split" | "edit" | "preview";
 let viewMode: ViewMode = "split";
 
 let markdownEditor: MarkdownEditor | null = null;
+let markdownRenderer: MarkdownRenderer | null = null;
 
 function setViewMode(mode: ViewMode) {
   viewMode = mode;
@@ -235,9 +237,34 @@ async function createNote(path: string, initialContent?: string) {
 
 async function refreshPreview() {
   if (!previewEl) return;
-  const markdown = editorEl?.value ?? "";
-  const html = await window.ekm.renderNote(markdown);
-  previewEl.innerHTML = html;
+  const source = markdownEditor?.getValue() ?? "";
+
+  // Use MarkdownRenderer (runs in renderer process, no IPC) when available.
+  if (markdownRenderer) {
+    await markdownRenderer.render(source);
+    return;
+  }
+
+  // Fallback: IPC-based rendering via main process.
+  try {
+    const html = await window.ekm.renderNote(source);
+    previewEl.innerHTML = html;
+  } catch {
+    previewEl.innerHTML = "";
+  }
+}
+
+async function refreshPreviewIncremental() {
+  if (!previewEl) return;
+  const source = markdownEditor?.getValue() ?? "";
+
+  if (markdownRenderer) {
+    await markdownRenderer.renderIncremental(source);
+    return;
+  }
+
+  // Fallback for incremental path.
+  await refreshPreview();
 }
 
 async function refreshBacklinks(path: string) {
@@ -284,13 +311,21 @@ function setupPreviewLinkNavigation() {
 
 function setupEditorLivePreview() {
   if (editorEl && !markdownEditor) {
+    if (previewEl) {
+      markdownRenderer = new MarkdownRenderer(previewEl, (target) => {
+        // Resolve wiki links to note paths; return null if unresolved.
+        const mdPath = target.endsWith(".md") ? target : `${target}.md`;
+        return allNotes.includes(mdPath) ? `/${mdPath}` : null;
+      });
+    }
+
     markdownEditor = new MarkdownEditor({
       parent: editorEl,
       value: "",
       onChange: () => {
         if (previewTimer) window.clearTimeout(previewTimer);
         previewTimer = window.setTimeout(() => {
-          refreshPreview().catch((error) => console.error(error));
+          refreshPreviewIncremental().catch((error) => console.error(error));
         }, 300);
       },
       onSave: () => {

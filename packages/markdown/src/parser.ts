@@ -6,10 +6,6 @@ import remarkFootnotes from "remark-footnotes";
 import remarkRehype from "remark-rehype";
 import rehypeHighlight from "rehype-highlight";
 import rehypeStringify from "rehype-stringify";
-import type { Plugin } from "unified";
-import type { Root as MdastRoot, Text, Parent, Node } from "mdast";
-import type { Root as HastRoot, Element } from "hast";
-import type { VFileCompatible } from "vfile";
 import { visit } from "unist-util-visit";
 import { toString } from "mdast-util-to-string";
 
@@ -23,23 +19,6 @@ export interface ParseResult {
   headings: Array<{ level: number; text: string; id: string }>;
 }
 
-// Custom MDAST node types
-interface WikiLinkNode extends Node {
-  type: "wikiLink";
-  target: string;
-  alias?: string;
-  isEmbed: boolean;
-}
-
-declare module "mdast" {
-  interface RootContentMap {
-    wikiLink: WikiLinkNode;
-  }
-  interface PhrasingContentMap {
-    wikiLink: WikiLinkNode;
-  }
-}
-
 // Slugify heading text to generate IDs
 function slugify(text: string): string {
   return text
@@ -51,15 +30,16 @@ function slugify(text: string): string {
 }
 
 // WikiLink remark plugin: parses [[target]], [[target|alias]], ![[embed]] in text nodes
-const remarkWikiLink: Plugin<[], MdastRoot> = function () {
-  return (tree: MdastRoot) => {
-    visit(tree, "text", (node: Text, index, parent: Parent | null) => {
+function remarkWikiLink() {
+  return (tree: any) => {
+    visit(tree, "text", (node: any, index: any, parent: any) => {
       if (!parent || index === undefined || index === null) return;
 
-      const wikiLinkPattern = /(!)?\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g;
-      const value = node.value;
+      const wikiLinkPattern =
+        /(!)?\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/g;
+      const value: string = node.value;
       let match: RegExpExecArray | null;
-      const newNodes: (Text | WikiLinkNode)[] = [];
+      const newNodes: any[] = [];
       let lastIndex = 0;
 
       while ((match = wikiLinkPattern.exec(value)) !== null) {
@@ -68,7 +48,10 @@ const remarkWikiLink: Plugin<[], MdastRoot> = function () {
         const isEmbed = bang === "!";
 
         if (match.index > lastIndex) {
-          newNodes.push({ type: "text", value: value.slice(lastIndex, match.index) });
+          newNodes.push({
+            type: "text",
+            value: value.slice(lastIndex, match.index),
+          });
         }
 
         newNodes.push({
@@ -76,7 +59,7 @@ const remarkWikiLink: Plugin<[], MdastRoot> = function () {
           target,
           alias: alias?.trim(),
           isEmbed,
-        } as WikiLinkNode);
+        });
 
         lastIndex = match.index + full.length;
       }
@@ -87,11 +70,11 @@ const remarkWikiLink: Plugin<[], MdastRoot> = function () {
         newNodes.push({ type: "text", value: value.slice(lastIndex) });
       }
 
-      parent.children.splice(index, 1, ...(newNodes as any[]));
+      parent.children.splice(index, 1, ...newNodes);
       return index + newNodes.length;
     });
   };
-};
+}
 
 export async function parseMarkdown(
   source: string,
@@ -102,16 +85,14 @@ export async function parseMarkdown(
 
   const resolveWikiLink = options?.resolveWikiLink ?? (() => null);
 
-  // Build the unified pipeline
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkMath)
     .use(remarkFootnotes as any, { inlineNotes: true })
     .use(remarkWikiLink)
-    // Extract headings from MDAST before converting to hast
     .use(function extractHeadings() {
-      return (tree: MdastRoot) => {
+      return (tree: any) => {
         visit(tree, "heading", (node: any) => {
           const text = toString(node);
           headings.push({
@@ -122,10 +103,9 @@ export async function parseMarkdown(
         });
       };
     })
-    // Collect wikiLinks before rehype conversion
     .use(function collectWikiLinks() {
-      return (tree: MdastRoot) => {
-        visit(tree, "wikiLink", (node: WikiLinkNode) => {
+      return (tree: any) => {
+        visit(tree, "wikiLink", (node: any) => {
           wikiLinks.push({
             target: node.target,
             alias: node.alias,
@@ -134,10 +114,11 @@ export async function parseMarkdown(
         });
       };
     })
-    .use(remarkRehype as any, {
+    // Cast to any[] to bypass strict overload checking on remarkRehype options
+    .use(...([remarkRehype, {
       allowDangerousHtml: true,
       handlers: {
-        wikiLink(state: any, node: WikiLinkNode) {
+        wikiLink(_state: any, node: any) {
           const { target, alias, isEmbed } = node;
           const displayText = alias ?? target;
 
@@ -159,14 +140,15 @@ export async function parseMarkdown(
             type: "element",
             tagName: "a",
             properties: {
-              className: resolved ? ["wikilink"] : ["wikilink", "unresolved"],
+              className: resolved
+                ? ["wikilink"]
+                : ["wikilink", "unresolved"],
               href: resolved ? href : `#unresolved-${slugify(target)}`,
             },
             children: [{ type: "text", value: displayText }],
           };
         },
-        // Handle mermaid code blocks
-        code(state: any, node: any) {
+        code(_state: any, node: any) {
           if (node.lang === "mermaid") {
             return {
               type: "element",
@@ -175,15 +157,15 @@ export async function parseMarkdown(
               children: [{ type: "text", value: node.value }],
             };
           }
-          // Fall through to default handler
-          return state.all(node);
+          // Return undefined to use default handler
+          return undefined;
         },
       },
-    })
+    }] as any))
     .use(rehypeHighlight as any, { ignoreMissing: true })
     .use(rehypeStringify as any, { allowDangerousHtml: true });
 
-  const file = await processor.process(source as VFileCompatible);
+  const file = await processor.process(source);
   const html = String(file);
 
   return { html, wikiLinks, headings };

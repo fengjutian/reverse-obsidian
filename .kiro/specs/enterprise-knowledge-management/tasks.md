@@ -83,44 +83,44 @@
 - [x] 6. Checkpoint — 确保所有测试通过
   - 确保所有测试通过，如有问题请向用户提问。
 
-- [ ] 7. 实现 Markdown 解析与渲染引擎
-  - [-] 7.1 实现 `packages/markdown/src/parser.ts`，基于 `unified/remark` 构建 Markdown AST 处理管线
+- [x] 7. 实现 Markdown 解析与渲染引擎
+  - [x] 7.1 实现 `packages/markdown/src/parser.ts`，基于 `unified/remark` 构建 Markdown AST 处理管线
     - 支持 CommonMark + 扩展：表格、任务列表、脚注、数学（KaTeX）、代码高亮（highlight.js）、Mermaid
     - 实现 WikiLink / Embed / Callout 自定义 remark 插件
     - _Requirements: 2.4, 3.1, 3.2, 3.3, 3.5, 3.6_
-  - [ ] 7.2 实现渲染管线：MDAST → rehype → React 组件树
+  - [x] 7.2 实现渲染管线：MDAST → rehype → React 组件树
     - WikiLink 渲染为可点击链接；未解析链接渲染为"悬挂链接"样式
     - Embed 语法内联渲染被引用笔记的 HTML 内容
     - 50,000 字符以内的笔记渲染时间 < 300ms
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
-  - [ ] 7.3 实现增量渲染：笔记更新时仅重新渲染变更段落（< 100ms）
+  - [x] 7.3 实现增量渲染：笔记更新时仅重新渲染变更段落（< 100ms）
     - _Requirements: 3.8_
   - [ ]* 7.4 为 Markdown 渲染器编写属性测试
     - **Property 3: 幂等渲染** — 对任意合法 Markdown 文档，二次渲染产生语义等价的 HTML
     - **Validates: Requirements 3.7**
 
-- [ ] 8. 实现 CodeMirror 6 编辑器组件
-  - [ ] 8.1 实现 `apps/desktop/src/renderer/editor.ts`，集成 CodeMirror 6
+- [x] 8. 实现 CodeMirror 6 编辑器组件
+  - [x] 8.1 实现 `apps/desktop/src/renderer/editor.ts`，集成 CodeMirror 6
     - 支持三种视图模式：Editing_Mode（源码）、Reading_Mode（预览）、Live_Preview（实时预览）
     - 实现标题与代码块折叠
     - Undo/Redo 历史深度 ≥ 200 操作
     - _Requirements: 2.1, 2.8, 2.10_
-  - [ ] 8.2 实现 WikiLink 自动补全扩展
+  - [x] 8.2 实现 WikiLink 自动补全扩展
     - 输入 `[[` 时 100ms 内弹出笔记标题补全下拉框
     - 输入 `#` 时 100ms 内弹出 Tag 补全下拉框
     - _Requirements: 2.2, 2.3_
-  - [ ] 8.3 实现图片粘贴处理
+  - [x] 8.3 实现图片粘贴处理
     - 粘贴图片时保存到 `assets/` 目录并插入 Markdown 图片引用
     - _Requirements: 2.5_
-  - [ ] 8.4 实现 Vim 键位模式（可选，通过设置开关）
+  - [x] 8.4 实现 Vim 键位模式（可选，通过设置开关）
     - _Requirements: 2.6_
-  - [ ] 8.5 实现防抖自动保存（最后一次按键后 2 秒写盘）与 Ctrl+S 立即保存（< 200ms）
+  - [x] 8.5 实现防抖自动保存（最后一次按键后 2 秒写盘）与 Ctrl+S 立即保存（< 200ms）
     - _Requirements: 2.7, 18.6_
-  - [ ] 8.6 实现 Frontmatter 解析与属性面板展示
+  - [x] 8.6 实现 Frontmatter 解析与属性面板展示
     - _Requirements: 2.9_
 
 - [ ] 9. 实现全文搜索系统
-  - [ ] 9.1 实现 `packages/search/src/search-engine.ts`，集成 FlexSearch
+  - [-] 9.1 实现 `packages/search/src/search-engine.ts`，集成 FlexSearch
     - 索引笔记内容、标题、Tags、Frontmatter 字段
     - 支持查询运算符：`AND`、`OR`、`NOT`、`"短语"`、`field:value`、`tag:name`、`path:folder`、`/regex/`
     - 10,000 Notes 规模下查询响应 < 500ms
