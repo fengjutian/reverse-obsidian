@@ -88,98 +88,98 @@
     - 支持 CommonMark + 扩展：表格、任务列表、脚注、数学（KaTeX）、代码高亮（highlight.js）、Mermaid
     - 实现 WikiLink / Embed / Callout 自定义 remark 插件
     - _Requirements: 2.4, 3.1, 3.2, 3.3, 3.5, 3.6_
-  - [~] 7.2 实现渲染管线：MDAST → rehype → React 组件树
+  - [ ] 7.2 实现渲染管线：MDAST → rehype → React 组件树
     - WikiLink 渲染为可点击链接；未解析链接渲染为"悬挂链接"样式
     - Embed 语法内联渲染被引用笔记的 HTML 内容
     - 50,000 字符以内的笔记渲染时间 < 300ms
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
-  - [~] 7.3 实现增量渲染：笔记更新时仅重新渲染变更段落（< 100ms）
+  - [ ] 7.3 实现增量渲染：笔记更新时仅重新渲染变更段落（< 100ms）
     - _Requirements: 3.8_
   - [ ]* 7.4 为 Markdown 渲染器编写属性测试
     - **Property 3: 幂等渲染** — 对任意合法 Markdown 文档，二次渲染产生语义等价的 HTML
     - **Validates: Requirements 3.7**
 
 - [ ] 8. 实现 CodeMirror 6 编辑器组件
-  - [~] 8.1 实现 `apps/desktop/src/renderer/editor.ts`，集成 CodeMirror 6
+  - [ ] 8.1 实现 `apps/desktop/src/renderer/editor.ts`，集成 CodeMirror 6
     - 支持三种视图模式：Editing_Mode（源码）、Reading_Mode（预览）、Live_Preview（实时预览）
     - 实现标题与代码块折叠
     - Undo/Redo 历史深度 ≥ 200 操作
     - _Requirements: 2.1, 2.8, 2.10_
-  - [~] 8.2 实现 WikiLink 自动补全扩展
+  - [ ] 8.2 实现 WikiLink 自动补全扩展
     - 输入 `[[` 时 100ms 内弹出笔记标题补全下拉框
     - 输入 `#` 时 100ms 内弹出 Tag 补全下拉框
     - _Requirements: 2.2, 2.3_
-  - [~] 8.3 实现图片粘贴处理
+  - [ ] 8.3 实现图片粘贴处理
     - 粘贴图片时保存到 `assets/` 目录并插入 Markdown 图片引用
     - _Requirements: 2.5_
-  - [~] 8.4 实现 Vim 键位模式（可选，通过设置开关）
+  - [ ] 8.4 实现 Vim 键位模式（可选，通过设置开关）
     - _Requirements: 2.6_
-  - [~] 8.5 实现防抖自动保存（最后一次按键后 2 秒写盘）与 Ctrl+S 立即保存（< 200ms）
+  - [ ] 8.5 实现防抖自动保存（最后一次按键后 2 秒写盘）与 Ctrl+S 立即保存（< 200ms）
     - _Requirements: 2.7, 18.6_
-  - [~] 8.6 实现 Frontmatter 解析与属性面板展示
+  - [ ] 8.6 实现 Frontmatter 解析与属性面板展示
     - _Requirements: 2.9_
 
 - [ ] 9. 实现全文搜索系统
-  - [~] 9.1 实现 `packages/search/src/search-engine.ts`，集成 FlexSearch
+  - [ ] 9.1 实现 `packages/search/src/search-engine.ts`，集成 FlexSearch
     - 索引笔记内容、标题、Tags、Frontmatter 字段
     - 支持查询运算符：`AND`、`OR`、`NOT`、`"短语"`、`field:value`、`tag:name`、`path:folder`、`/regex/`
     - 10,000 Notes 规模下查询响应 < 500ms
     - _Requirements: 6.1, 6.2, 6.3, 6.5_
-  - [~] 9.2 实现搜索结果高亮与排序（相关度、修改时间、创建时间）
+  - [ ] 9.2 实现搜索结果高亮与排序（相关度、修改时间、创建时间）
     - _Requirements: 6.4, 6.8_
-  - [~] 9.3 实现文件变更后 2 秒内增量更新搜索索引
+  - [ ] 9.3 实现文件变更后 2 秒内增量更新搜索索引
     - _Requirements: 6.6_
-  - [~] 9.4 实现 Quick_Switcher 组件（Ctrl+O），模糊搜索笔记标题，50ms 内返回结果
+  - [ ] 9.4 实现 Quick_Switcher 组件（Ctrl+O），模糊搜索笔记标题，50ms 内返回结果
     - _Requirements: 16.2_
 
 - [ ] 10. 实现 Graph View 图谱视图
-  - [~] 10.1 实现 `packages/graph/src/layout-worker.ts`，在 Worker 线程中运行 `d3-force` 布局计算
+  - [ ] 10.1 实现 `packages/graph/src/layout-worker.ts`，在 Worker 线程中运行 `d3-force` 布局计算
     - 5,000 Notes 规模下初始布局 < 3 秒
     - 支持物理模拟参数配置（斥力、引力、碰撞半径）
     - _Requirements: 5.2, 5.3_
-  - [~] 10.2 实现 `packages/graph/src/graph-renderer.ts`，使用 sigma.js（WebGL）渲染图谱
+  - [ ] 10.2 实现 `packages/graph/src/graph-renderer.ts`，使用 sigma.js（WebGL）渲染图谱
     - 节点点击：高亮节点及直接邻居，显示笔记标题 tooltip
     - 节点双击：在编辑器中打开对应笔记
     - 支持缩放（0.1x–10x）与平移
     - _Requirements: 5.1, 5.4, 5.5, 5.9_
-  - [~] 10.3 实现图谱过滤功能（按 Tag、文件夹路径、链接深度 1–5 跳）与局部图模式
+  - [ ] 10.3 实现图谱过滤功能（按 Tag、文件夹路径、链接深度 1–5 跳）与局部图模式
     - _Requirements: 5.6, 5.7_
-  - [~] 10.4 实现笔记增删时图谱增量更新（< 500ms，无需全量重渲染）
+  - [ ] 10.4 实现笔记增删时图谱增量更新（< 500ms，无需全量重渲染）
     - 大图（>500 元素）启用视窗裁剪，维持 60fps
     - _Requirements: 5.8, 15.5_
 
-- [~] 11. Checkpoint — 确保所有测试通过
+- [ ] 11. Checkpoint — 确保所有测试通过
   - 确保所有测试通过，如有问题请向用户提问。
 
 - [ ] 12. 实现插件系统
-  - [~] 12.1 实现 `packages/plugin-sdk/src/plugin-api.ts`，定义插件 API 命名空间
+  - [ ] 12.1 实现 `packages/plugin-sdk/src/plugin-api.ts`，定义插件 API 命名空间
     - `app.vault`（文件操作）、`app.workspace`（布局/视图）、`app.metadataCache`（LinkIndex 查询）、`app.commands`（命令注册）、`app.settings`（设置访问）
     - _Requirements: 7.1, 7.7_
-  - [~] 12.2 实现插件沙箱加载器 `packages/plugin-sdk/src/plugin-sandbox.ts`
+  - [ ] 12.2 实现插件沙箱加载器 `packages/plugin-sdk/src/plugin-sandbox.ts`
     - 隔离全局对象，能力白名单授权（文件、网络、剪贴板分别控制）
     - 捕获插件未处理异常，禁用插件并显示错误通知，不崩溃主应用
     - _Requirements: 7.2, 7.4_
-  - [~] 12.3 实现插件命令注册与命令面板集成
+  - [ ] 12.3 实现插件命令注册与命令面板集成
     - 插件加载后 100ms 内命令可在命令面板中使用
     - _Requirements: 7.8, 16.1_
-  - [~] 12.4 实现企业插件白名单校验（Enterprise_Admin 配置 allowlist 时仅加载白名单插件）
+  - [ ] 12.4 实现企业插件白名单校验（Enterprise_Admin 配置 allowlist 时仅加载白名单插件）
     - _Requirements: 7.6_
 
 - [ ] 13. 实现主题系统
-  - [~] 13.1 实现内置亮色/暗色主题，基于 CSS 自定义属性（design token）
+  - [ ] 13.1 实现内置亮色/暗色主题，基于 CSS 自定义属性（design token）
     - 主题切换无需重启，200ms 内生效
     - _Requirements: 8.1, 8.2_
-  - [~] 13.2 实现主题热重载：主题 CSS 文件磁盘变更后 500ms 内自动应用
+  - [ ] 13.2 实现主题热重载：主题 CSS 文件磁盘变更后 500ms 内自动应用
     - _Requirements: 8.7_
-  - [~] 13.3 实现自定义 CSS 片段叠加（按设置顺序应用在主题之上）
+  - [ ] 13.3 实现自定义 CSS 片段叠加（按设置顺序应用在主题之上）
     - _Requirements: 8.5_
 
 - [ ] 14. 实现多标签页与分屏布局
-  - [~] 14.1 实现 Tab 管理器：支持多标签页打开、中键点击链接新建 Tab、拖拽排序
+  - [ ] 14.1 实现 Tab 管理器：支持多标签页打开、中键点击链接新建 Tab、拖拽排序
     - _Requirements: 21.1, 21.2, 21.7_
-  - [~] 14.2 实现水平/垂直 Split_View：拖拽 Tab 到编辑区边缘触发分屏
+  - [ ] 14.2 实现水平/垂直 Split_View：拖拽 Tab 到编辑区边缘触发分屏
     - _Requirements: 21.3_
-  - [~] 14.3 实现 Popout_Window：在独立 OS 窗口中打开笔记，共享同一 Vault 上下文
+  - [ ] 14.3 实现 Popout_Window：在独立 OS 窗口中打开笔记，共享同一 Vault 上下文
     - _Requirements: 21.4_
   - [ ] 14.4 实现 Tab 关联笔记被删除时自动关闭 Tab 并通知用户
     - _Requirements: 21.6_

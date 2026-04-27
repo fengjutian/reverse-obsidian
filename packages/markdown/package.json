@@ -11,13 +11,17 @@
   },
   "dependencies": {
     "@ekm/shared-types": "workspace:*",
-    "unified": "^11.0.5",
-    "remark-parse": "^11.0.0",
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "mdast-util-to-string": "^4.0.0",
+    "rehype-highlight": "^7.0.2",
+    "rehype-stringify": "^10.0.1",
+    "remark-footnotes": "^4.0.1",
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",
-    "remark-footnotes": "^4.0.1",
+    "remark-parse": "^11.0.0",
     "remark-rehype": "^11.1.1",
-    "rehype-stringify": "^10.0.1",
-    "rehype-highlight": "^7.0.2"
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.1.0"
   }
 }
