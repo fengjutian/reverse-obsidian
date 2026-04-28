@@ -26,7 +26,6 @@ declare global {
   }
 }
 
-
 import { MarkdownEditor } from "./editor.js";
 import { MarkdownRenderer } from "./markdown-renderer.js";
 
@@ -42,15 +41,11 @@ const cmdBtn = document.querySelector<HTMLButtonElement>("#cmd-btn");
 const paletteEl = document.querySelector<HTMLElement>("#command-palette");
 const paletteInput = document.querySelector<HTMLInputElement>("#palette-input");
 const paletteList = document.querySelector<HTMLUListElement>("#palette-list");
-const appShell = document.querySelector<HTMLElement>(".app-shell");
-const gutterLeft = document.querySelector<HTMLElement>(".gutter-left");
-const gutterRight = document.querySelector<HTMLElement>(".gutter-right");
 const globalSearchInput = document.querySelector<HTMLInputElement>("#search-global-input");
 const globalSearchResults = document.querySelector<HTMLUListElement>("#search-results");
 const modeToggleBtn = document.querySelector<HTMLButtonElement>("#mode-toggle-btn");
 const contextMenuEl = document.querySelector<HTMLElement>("#context-menu");
-
-
+const themeToggleBtn = document.querySelector<HTMLButtonElement>("#theme-toggle-btn");
 
 let activePath = "";
 let allNotes: string[] = [];
@@ -58,6 +53,7 @@ let previewTimer: number | undefined;
 let foldedDirs = new Set<string>();
 let paletteCandidates: string[] = [];
 let contextMenuTargetPath: string | null = null;
+let currentTheme: "dark" | "light" = "dark";
 
 type ViewMode = "split" | "edit" | "preview";
 let viewMode: ViewMode = "split";
@@ -67,17 +63,23 @@ let markdownRenderer: MarkdownRenderer | null = null;
 
 function setViewMode(mode: ViewMode) {
   viewMode = mode;
-  if (!appShell) return;
-  appShell.classList.remove("mode-split", "mode-edit", "mode-preview");
-  appShell.classList.add(`mode-${mode}`);
+  const editorContainer = document.querySelector(".editor-container");
+  if (!editorContainer) return;
+
+  editorContainer.classList.remove("mode-split", "mode-edit", "mode-preview");
+  editorContainer.classList.add(`mode-${mode}`);
 }
 
-const MIN_LEFT = 200;
-const MIN_RIGHT = 200;
-
-let isDragging: "left" | "right" | null = null;
-let startX = 0;
-let startCols: [number, number] = [0, 0];
+function toggleTheme() {
+  currentTheme = currentTheme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", currentTheme);
+  if (themeToggleBtn) {
+    themeToggleBtn.textContent = currentTheme === "dark" ? "🌙" : "☀️";
+  }
+  if (markdownEditor) {
+    markdownEditor.setTheme(currentTheme);
+  }
+}
 
 function createRootNode(): TreeNode {
   return {
@@ -131,9 +133,9 @@ function renderTreeNode(node: TreeNode, container: HTMLElement): void {
   for (const child of children) {
     if (child.isFile) {
       const li = document.createElement("li");
-      const btn = document.createElement("button");
-      btn.className = `note-item ${child.fullPath === activePath ? "active" : ""}`;
-      btn.textContent = child.name;
+      const btn = document.createElement("div");
+      btn.className = `tree-item ${child.fullPath === activePath ? "active" : ""}`;
+      btn.innerHTML = `<span class="tree-item-icon">📄</span><span>${child.name}</span>`;
       btn.title = child.fullPath;
       btn.addEventListener("click", async () => {
         await openNote(child.fullPath);
@@ -148,12 +150,10 @@ function renderTreeNode(node: TreeNode, container: HTMLElement): void {
     }
 
     const li = document.createElement("li");
-    li.className = "folder-node";
-
-    const header = document.createElement("button");
-    header.className = "folder-toggle";
+    const header = document.createElement("div");
+    header.className = "tree-item";
     const folded = foldedDirs.has(child.fullPath);
-    header.innerHTML = `<span class="folder-chevron">${folded ? "▸" : "▾"}</span><span>${child.name}</span>`;
+    header.innerHTML = `<span class="tree-item-icon">${folded ? "📁" : "📂"}</span><span>${child.name}</span>`;
     header.addEventListener("click", () => {
       if (foldedDirs.has(child.fullPath)) {
         foldedDirs.delete(child.fullPath);
@@ -167,7 +167,7 @@ function renderTreeNode(node: TreeNode, container: HTMLElement): void {
 
     if (!folded) {
       const nested = document.createElement("ul");
-      nested.className = "note-tree-nested";
+      nested.className = "nested";
       renderTreeNode(child, nested);
       li.appendChild(nested);
     }
@@ -185,7 +185,7 @@ function renderTree(): void {
 
   noteListEl.innerHTML = "";
   if (!filtered.length) {
-    noteListEl.innerHTML = '<li class="empty">没有匹配的笔记</li>';
+    noteListEl.innerHTML = '<li class="empty-state">No matching notes</li>';
     return;
   }
 
@@ -213,7 +213,7 @@ async function openNote(path: string) {
 async function saveNote() {
   const path = notePathInput?.value.trim() || activePath;
   if (!path) {
-    alert("请先输入笔记路径");
+    alert("Please enter note path first");
     return;
   }
 
@@ -234,18 +234,15 @@ async function createNote(path: string, initialContent?: string) {
   await openNote(mdPath);
 }
 
-
 async function refreshPreview() {
   if (!previewEl) return;
   const source = markdownEditor?.getValue() ?? "";
 
-  // Use MarkdownRenderer (runs in renderer process, no IPC) when available.
   if (markdownRenderer) {
     await markdownRenderer.render(source);
     return;
   }
 
-  // Fallback: IPC-based rendering via main process.
   try {
     const html = await window.ekm.renderNote(source);
     previewEl.innerHTML = html;
@@ -263,7 +260,6 @@ async function refreshPreviewIncremental() {
     return;
   }
 
-  // Fallback for incremental path.
   await refreshPreview();
 }
 
@@ -273,18 +269,20 @@ async function refreshBacklinks(path: string) {
   backlinksEl.innerHTML = "";
 
   if (!backlinks.length) {
-    backlinksEl.innerHTML = '<li class="empty">暂无反向链接</li>';
+    backlinksEl.innerHTML = '<li class="empty-state">No backlinks</li>';
     return;
   }
 
   for (const p of backlinks) {
     const li = document.createElement("li");
-    const btn = document.createElement("button");
-    btn.textContent = p;
-    btn.addEventListener("click", () => {
+    const link = document.createElement("a");
+    link.href = "#";
+    link.textContent = p;
+    link.addEventListener("click", (e) => {
+      e.preventDefault();
       openNote(p).catch((error) => console.error(error));
     });
-    li.appendChild(btn);
+    li.appendChild(link);
     backlinksEl.appendChild(li);
   }
 }
@@ -304,7 +302,7 @@ function setupPreviewLinkNavigation() {
     const path = toNotePathFromWikiHref(link.getAttribute("href") ?? "");
     openNote(path).catch((error) => {
       console.error(error);
-      alert(`无法打开链接笔记：${path}`);
+      alert(`Cannot open linked note: ${path}`);
     });
   });
 }
@@ -313,7 +311,6 @@ function setupEditorLivePreview() {
   if (editorEl && !markdownEditor) {
     if (previewEl) {
       markdownRenderer = new MarkdownRenderer(previewEl, (target) => {
-        // Resolve wiki links to note paths; return null if unresolved.
         const mdPath = target.endsWith(".md") ? target : `${target}.md`;
         return allNotes.includes(mdPath) ? `/${mdPath}` : null;
       });
@@ -361,13 +358,13 @@ function showContextMenu(x: number, y: number, path: string) {
 
 async function deleteNote(path: string) {
   if (!path) return;
-  const confirmed = confirm(`确认删除笔记「${path}」？此操作不可撤销。`);
+  const confirmed = confirm(`Confirm delete note "${path}"? This action cannot be undone.`);
   if (!confirmed) return;
   try {
     await window.ekm.deleteNote?.(path);
   } catch (error) {
     console.error(error);
-    alert("删除失败。");
+    alert("Delete failed.");
     return;
   }
   hideContextMenu();
@@ -380,10 +377,9 @@ async function deleteNote(path: string) {
   }
 }
 
-
 async function renameNote(oldPath: string) {
   if (!oldPath) return;
-  const newPathRaw = prompt("输入新路径（例如 inbox/renamed.md）：", oldPath);
+  const newPathRaw = prompt("Enter new path (e.g., inbox/renamed.md):", oldPath);
   if (!newPathRaw || newPathRaw === oldPath) {
     hideContextMenu();
     return;
@@ -400,7 +396,7 @@ async function renameNote(oldPath: string) {
     }
   } catch (error) {
     console.error(error);
-    alert("重命名失败。");
+    alert("Rename failed.");
     hideContextMenu();
   }
 }
@@ -409,7 +405,7 @@ async function moveNote(oldPath: string) {
   if (!oldPath) return;
   const lastSlash = oldPath.lastIndexOf("/");
   const name = lastSlash >= 0 ? oldPath.slice(lastSlash + 1) : oldPath;
-  const newPathRaw = prompt("输入新目录（例如 archive/）：", lastSlash >= 0 ? oldPath.slice(0, lastSlash) : "");
+  const newPathRaw = prompt("Enter new directory (e.g., archive/):", lastSlash >= 0 ? oldPath.slice(0, lastSlash) : "");
   if (newPathRaw === null) {
     hideContextMenu();
     return;
@@ -431,7 +427,7 @@ async function moveNote(oldPath: string) {
     }
   } catch (error) {
     console.error(error);
-    alert("移动失败。");
+    alert("Move failed.");
     hideContextMenu();
   }
 }
@@ -458,7 +454,6 @@ function setupContextMenu() {
   });
 }
 
-
 function openCommandPalette() {
   if (!paletteEl || !paletteInput) return;
   paletteEl.classList.remove("hidden");
@@ -481,20 +476,18 @@ function renderPaletteList(filter: string) {
   paletteList.innerHTML = "";
 
   if (!candidates.length) {
-    paletteList.innerHTML = '<li class="empty">没有匹配的文件</li>';
+    paletteList.innerHTML = '<li class="empty-state">No matching files</li>';
     return;
   }
 
   for (const path of candidates.slice(0, 30)) {
     const li = document.createElement("li");
-    const btn = document.createElement("button");
-    btn.className = "palette-item";
-    btn.textContent = path;
-    btn.addEventListener("click", () => {
+    li.className = "palette-item";
+    li.innerHTML = `<span class="palette-item-icon">📄</span><span class="palette-item-text">${path}</span>`;
+    li.addEventListener("click", () => {
       closeCommandPalette();
       openNote(path).catch((error) => console.error(error));
     });
-    li.appendChild(btn);
     paletteList.appendChild(li);
   }
 }
@@ -519,7 +512,7 @@ function setupCommandPalette() {
 
     if (event.key === "Enter") {
       event.preventDefault();
-      const first = paletteList?.querySelector<HTMLButtonElement>(".palette-item");
+      const first = paletteList?.querySelector<HTMLLIElement>(".palette-item");
       first?.click();
     }
   });
@@ -545,7 +538,7 @@ function setupGlobalSearch() {
   globalSearchInput.addEventListener("input", async () => {
     const query = globalSearchInput.value.trim();
     if (!query) {
-      globalSearchResults.innerHTML = '<li class="empty">输入关键词搜索</li>';
+      globalSearchResults.innerHTML = '<li class="empty-state">Enter keyword to search</li>';
       return;
     }
 
@@ -554,7 +547,7 @@ function setupGlobalSearch() {
       globalSearchResults.innerHTML = "";
 
       if (!results.length) {
-        globalSearchResults.innerHTML = '<li class="empty">没有找到匹配结果</li>';
+        globalSearchResults.innerHTML = '<li class="empty-state">No results found</li>';
         return;
       }
 
@@ -573,7 +566,7 @@ function setupGlobalSearch() {
       }
     } catch (error) {
       console.error(error);
-      globalSearchResults.innerHTML = '<li class="empty">搜索失败</li>';
+      globalSearchResults.innerHTML = '<li class="empty-state">Search failed</li>';
     }
   });
 
@@ -595,7 +588,7 @@ setupSearchFilter();
 setupCommandPalette();
 setupGlobalSearch();
 setupContextMenu();
-setupGutters();
+
 modeToggleBtn?.addEventListener("click", () => {
   const next: ViewMode[] = ["split", "edit", "preview"];
   const curIdx = next.indexOf(viewMode);
@@ -603,12 +596,14 @@ modeToggleBtn?.addEventListener("click", () => {
   setViewMode(nextMode);
 });
 
-
-
 newNoteBtn?.addEventListener("click", () => {
   const base = (notePathInput?.value || "inbox/new-note.md").trim();
   const target = base || "inbox/new-note.md";
   createNote(target).catch((error) => console.error(error));
+});
+
+themeToggleBtn?.addEventListener("click", () => {
+  toggleTheme();
 });
 
 window.addEventListener("keydown", (event) => {
@@ -635,57 +630,6 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-
-function setupGutters() {
-  if (!appShell) return;
-  const getCols = (): [number, number] => {
-    const style = getComputedStyle(appShell);
-    const cols = style.gridTemplateColumns.split(" ");
-    // pattern: left | gutter | center | gutter | right
-    return [parseInt(cols[0]), parseInt(cols[4])];
-  };
-
-  const setCols = (left: number, right: number) => {
-    const clampedLeft = Math.max(MIN_LEFT, Math.min(left, 520));
-    const clampedRight = Math.max(MIN_RIGHT, Math.min(right, 640));
-    appShell.style.gridTemplateColumns = `${clampedLeft}px 6px 1fr 6px ${clampedRight}px`;
-  };
-
-  const onMouseMove = (e: MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - startX;
-    const [left0, right0] = startCols;
-    if (isDragging === "left") {
-      setCols(left0 + dx, right0);
-    } else {
-      setCols(left0, right0 - dx);
-    }
-  };
-  const onMouseUp = () => {
-    if (!isDragging) return;
-    startCols = getCols();
-    isDragging = null;
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
-  };
-
-  const beginDrag = (side: "left" | "right", e: MouseEvent) => {
-    isDragging = side;
-    startX = e.clientX;
-    startCols = getCols();
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  };
-
-  gutterLeft?.addEventListener("mousedown", (e) => beginDrag("left", e));
-  gutterRight?.addEventListener("mousedown", (e) => beginDrag("right", e));
-}
-
-
-
-setupGutters();
-setupEditorLivePreview();
-
 refreshNotes()
   .then(async () => {
     if (allNotes.length > 0) {
@@ -694,7 +638,7 @@ refreshNotes()
     }
 
     if (notePathInput) notePathInput.value = "inbox/first-note.md";
-    const welcomeContent = "# Welcome\n\n现在支持目录树和命令面板（Ctrl/Cmd+P）。\n\n试试创建 [[second-note]]。";
+    const welcomeContent = "# Welcome\n\nNow supports file tree and command palette (Ctrl/Cmd+P).\n\nTry creating [[second-note]].";
     if (markdownEditor) {
       markdownEditor.setValue(welcomeContent);
     }
@@ -704,4 +648,3 @@ refreshNotes()
   .catch((error) => console.error(error));
 
 export {};
-

@@ -1,12 +1,6 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { randomUUID } from "node:crypto";
-import { createRequire } from "node:module";
-
-// sql.js is a CJS module — use createRequire for ESM compatibility
-const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const initSqlJs = require("sql.js") as (config?: object) => Promise<{ Database: new (data?: Buffer | Uint8Array) => SqlJsDb }>;
 
 interface SqlJsDb {
   run(sql: string, params?: unknown[]): void;
@@ -14,6 +8,19 @@ interface SqlJsDb {
   export(): Uint8Array;
   close(): void;
 }
+
+type InitSqlJsFn = (config?: object) => Promise<{ Database: new (data?: Buffer | Uint8Array) => SqlJsDb }>;
+
+function getInitSqlJs(): InitSqlJsFn {
+  if (typeof globalThis.require !== "undefined") {
+    return globalThis.require("sql.js");
+  }
+  const { createRequire } = require("node:module");
+  const req = createRequire(require("node:url").pathToFileURL(__filename).href);
+  return req("sql.js");
+}
+
+const initSqlJs = getInitSqlJs();
 
 /**
  * VaultDatabase — local SQLite metadata store backed by sql.js (pure WASM).
@@ -36,12 +43,10 @@ export class VaultDatabase {
     try {
       this.db = new SQL.Database(data);
     } catch {
-      // Corrupted — delete and recreate
       if (existsSync(this.dbPath)) unlinkSync(this.dbPath);
       this.db = new SQL.Database();
     }
 
-    // Integrity check
     const result = this.db.exec("PRAGMA integrity_check");
     const ok = result[0]?.values?.[0]?.[0] === "ok";
     if (!ok) {
@@ -118,8 +123,6 @@ export class VaultDatabase {
     `);
   }
 
-  // ── Notes ──────────────────────────────────────────────────────────────────
-
   upsertNote(meta: { path: string; title: string; hash: string; workspaceId: string }): void {
     this.conn.run(
       `INSERT INTO notes (id, workspace_id, path, title, hash, updated_at)
@@ -134,8 +137,6 @@ export class VaultDatabase {
     this.conn.run("DELETE FROM notes WHERE path = ?", [path]);
     this._persist();
   }
-
-  // ── Links ──────────────────────────────────────────────────────────────────
 
   upsertLinks(sourcePath: string, links: Array<{ targetPath: string; relation: string }>): void {
     this.conn.run("DELETE FROM links WHERE source_path = ?", [sourcePath]);
@@ -167,8 +168,6 @@ export class VaultDatabase {
     }));
   }
 
-  // ── Index state ────────────────────────────────────────────────────────────
-
   getIndexState(workspaceId: string): { lastScanAt: string; lastEventId: string } | null {
     const result = this.conn.exec(
       "SELECT last_scan_at, last_event_id FROM index_state WHERE workspace_id = ?",
@@ -187,8 +186,6 @@ export class VaultDatabase {
     );
     this._persist();
   }
-
-  // ── Transaction helper ─────────────────────────────────────────────────────
 
   transaction<T>(fn: () => T): T {
     this.conn.run("BEGIN");

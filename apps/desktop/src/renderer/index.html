@@ -1,69 +1,85 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>EKM Desktop</title>
+    <title>Obsidian-like EKM</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app-shell">
-      <aside class="pane left-pane">
-        <div class="pane-header-row">
-          <div class="pane-header">Vault</div>
-          <button id="cmd-btn" class="ghost-btn" title="Ctrl/Cmd + P">⌘P</button>
+    <div class="app-shell">
+      <aside class="left-sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">Notes</span>
+          <div class="sidebar-actions">
+            <button class="sidebar-icon-btn" id="theme-toggle-btn" title="Toggle theme">🌙</button>
+            <button class="sidebar-icon-btn" id="new-note-btn" title="New note (Ctrl+N)">+</button>
+            <button class="sidebar-icon-btn" id="cmd-btn" title="Command palette (Ctrl+P)">⌘</button>
+          </div>
         </div>
-        <input id="search-input" class="search-input" placeholder="过滤文件..." />
-        <ul id="note-list" class="note-list"></ul>
-
-        <div id="context-menu" class="context-menu hidden" role="menu">
-          <button data-action="open" role="menuitem">打开</button>
-          <button data-action="rename" role="menuitem">重命名</button>
-          <button data-action="move" role="menuitem">移动</button>
-          <button data-action="delete" role="menuitem">删除</button>
+        <div class="search-container">
+          <input type="text" class="search-input" id="search-input" placeholder="Filter notes..." />
+        </div>
+        <div class="file-tree">
+          <ul id="note-list"></ul>
         </div>
       </aside>
 
-
-      <div class="gutter gutter-left" aria-label="调整侧栏宽度" role="separator"></div>
-
-      <section class="pane center-pane">
-        <header class="editor-toolbar">
-          <input id="note-path" class="path-input" placeholder="notes/demo.md" />
-          <div class="toolbar-actions">
-            <button id="new-note-btn" class="btn" title="新建 (Ctrl+N)">新建</button>
-            <button id="save-btn" class="btn" title="保存 (Ctrl+S)">保存</button>
-            <button id="mode-toggle-btn" class="btn ghost-btn" title="切换视图 (Ctrl+E)">分屏</button>
+      <main class="main-content">
+        <header class="editor-header">
+          <input type="text" class="path-input" id="note-path" placeholder="notes/demo.md" />
+          <div class="editor-actions">
+            <button class="toolbar-btn" id="mode-toggle-btn" title="Toggle view (Ctrl+E)">📄</button>
+            <button class="toolbar-btn" id="save-btn" title="Save (Ctrl+S)">💾</button>
           </div>
         </header>
-        <div id="editor" class="editor-container"></div>
-      </section>
+        <div class="editor-container" id="editor"></div>
+      </main>
 
-      <div class="gutter gutter-right" aria-label="调整预览栏宽度" role="separator"></div>
-
-      <aside class="pane right-pane">
-        <section class="card">
-          <div class="card-title">Preview</div>
-          <article id="preview" class="preview"></article>
-        </section>
-        <section class="card">
-          <div class="card-title">Backlinks</div>
-          <ul id="backlinks" class="backlinks"></ul>
-        </section>
-        <section class="card">
-          <div class="card-title">Search</div>
-          <input id="search-global-input" class="search-input" placeholder="全局搜索 (Ctrl+Shift+F)" />
-          <ul id="search-results" class="search-results"></ul>
-        </section>
+      <aside class="right-sidebar">
+        <div class="right-sidebar-section">
+          <div class="section-header">Preview</div>
+          <article class="preview" id="preview"></article>
+        </div>
+        <div class="right-sidebar-section">
+          <div class="section-header">Backlinks</div>
+          <ul class="backlinks-list" id="backlinks"></ul>
+        </div>
+        <div class="right-sidebar-section">
+          <div class="section-header">Search</div>
+          <input type="text" class="search-input" id="search-global-input" placeholder="Global search (Ctrl+Shift+F)" />
+          <ul class="search-results" id="search-results"></ul>
+        </div>
       </aside>
-    </main>
+    </div>
 
-    <section id="command-palette" class="palette hidden" role="dialog" aria-modal="true">
-      <div class="palette-panel">
-        <input id="palette-input" class="palette-input" placeholder="输入文件名快速打开..." />
-        <ul id="palette-list" class="palette-list"></ul>
+    <div id="context-menu" class="context-menu hidden">
+      <div class="context-menu-item" data-action="open">
+        <span class="context-menu-item-icon">📄</span>
+        <span>Open</span>
       </div>
-    </section>
+      <div class="context-menu-item" data-action="rename">
+        <span class="context-menu-item-icon">✏️</span>
+        <span>Rename</span>
+      </div>
+      <div class="context-menu-item" data-action="move">
+        <span class="context-menu-item-icon">📁</span>
+        <span>Move</span>
+      </div>
+      <div class="context-menu-item danger" data-action="delete">
+        <span class="context-menu-item-icon">🗑️</span>
+        <span>Delete</span>
+      </div>
+    </div>
+
+    <div id="command-palette" class="command-palette hidden">
+      <div class="palette-container">
+        <div class="palette-input-container">
+          <input type="text" class="palette-input" id="palette-input" placeholder="Type a command or file name..." />
+        </div>
+        <div class="palette-results" id="palette-list"></div>
+      </div>
+    </div>
 
     <script type="module" src="./index.js"></script>
   </body>

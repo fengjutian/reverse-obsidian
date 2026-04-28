@@ -1,4 +1,4 @@
-import { EditorView, keymap } from "@codemirror/view";
+import { EditorView, keymap, EditorView as CodeMirrorView } from "@codemirror/view";
 import { EditorState, StateEffect, StateField, Extension } from "@codemirror/state";
 import { markdown } from "@codemirror/lang-markdown";
 import { languages } from "@codemirror/language-data";
@@ -18,6 +18,36 @@ import {
   CompletionContext,
   CompletionResult,
 } from "@codemirror/autocomplete";
+
+const lightTheme = CodeMirrorView.theme({
+  "&": {
+    backgroundColor: "#ffffff",
+    color: "#1a1a2e",
+  },
+  ".cm-content": {
+    caretColor: "#1a73e8",
+  },
+  ".cm-cursor, .cm-dropCursor": {
+    borderLeftColor: "#1a73e8",
+  },
+  "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": {
+    backgroundColor: "#d2e3fc",
+  },
+  ".cm-gutters": {
+    backgroundColor: "#f5f5f5",
+    color: "#6c7086",
+    border: "none",
+  },
+  ".cm-activeLineGutter": {
+    backgroundColor: "#e8e8e8",
+  },
+  ".cm-activeLine": {
+    backgroundColor: "#f5f5f5",
+  },
+  ".cm-line": {
+    color: "#1a1a2e",
+  },
+});
 
 export interface EditorConfig {
   parent: HTMLElement;
@@ -256,6 +286,13 @@ export class MarkdownEditor {
   // Task 8.2: update tag list for tag autocomplete
   setTagList(tags: string[]): void {
     this.tagList = tags;
+  }
+
+  setTheme(theme: "dark" | "light"): void {
+    const themeExtension = theme === "dark" ? oneDark : lightTheme;
+    this.view.dispatch({
+      effects: StateEffect.appendConfig.of(themeExtension),
+    });
   }
 
   // Task 8.6: parse YAML frontmatter

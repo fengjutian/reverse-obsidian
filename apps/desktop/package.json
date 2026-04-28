@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "main": "dist/main/index.js",
+  "main": "dist/main/index.cjs",
   "scripts": {
-    "build": "pnpm -C ../.. --filter @ekm/shared-types build && pnpm -C ../.. --filter @ekm/core build && pnpm -C ../.. --filter @ekm/markdown build && tsc -p tsconfig.json && node ./scripts/copy-renderer-assets.mjs",
-    "dev": "pnpm run build && electron ./dist/main/index.js",
+    "build": "pnpm -C ../.. --filter @ekm/shared-types build && pnpm -C ../.. --filter @ekm/core build && pnpm -C ../.. --filter @ekm/markdown build && node ./scripts/build-main.mjs && node ./scripts/build-preload.mjs && node ./scripts/build-renderer.mjs",
+    "dev": "pnpm run build && electron ./dist/main/index.cjs",
     "typecheck": "pnpm -C ../.. --filter @ekm/shared-types build && pnpm -C ../.. --filter @ekm/core build && pnpm -C ../.. --filter @ekm/markdown build && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
@@ -25,6 +25,7 @@
     "@ekm/markdown": "workspace:*",
     "@ekm/shared-types": "workspace:*",
     "electron": "^31.7.7",
+    "sql.js": "^1.12.0",
     "zod": "^3.23.8"
   }
 }

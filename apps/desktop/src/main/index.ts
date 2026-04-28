@@ -1,6 +1,5 @@
 import { app, BrowserWindow, ipcMain, IpcMainInvokeEvent } from "electron";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import {
@@ -18,8 +17,8 @@ import { assertWithinVault } from "./path-guard.js";
 // Constants
 // ---------------------------------------------------------------------------
 
-const mainDir = dirname(fileURLToPath(import.meta.url));
-const preloadEntry = join(mainDir, "../preload/index.js");
+const mainDir = dirname(__filename);
+const preloadEntry = join(mainDir, "../preload/index.cjs");
 const rendererHtml = join(mainDir, "../renderer/index.html");
 
 const RECENT_FILE = join(homedir(), ".ekm", "recent.json");
@@ -77,7 +76,7 @@ class WindowManager {
         preload: preloadEntry,
         contextIsolation: true,
         nodeIntegration: false,
-        sandbox: true
+        sandbox: false
       }
     });
 
