@@ -35,12 +35,24 @@ const api: DesktopApi = {
   // note:*
   readNote: (path) => {
     validate(PathSchema, path);
-    return ipcRenderer.invoke(IPC_CHANNELS.noteRead, path);
+    return ipcRenderer.invoke(IPC_CHANNELS.noteRead, path).then((response) => {
+      if (response && typeof response === "object" && "code" in response) {
+        const err = response as { code: string; message: string };
+        throw new Error(`${err.code}: ${err.message}`);
+      }
+      return response as string;
+    });
   },
   writeNote: (path, content) => {
     validate(PathSchema, path);
     validate(ContentSchema, content);
-    return ipcRenderer.invoke(IPC_CHANNELS.noteWrite, path, content);
+    return ipcRenderer.invoke(IPC_CHANNELS.noteWrite, path, content).then((response) => {
+      if (response && typeof response === "object" && "code" in response) {
+        const err = response as { code: string; message: string };
+        throw new Error(`${err.code}: ${err.message}`);
+      }
+      return response;
+    });
   },
   deleteNote: (path) => {
     validate(PathSchema, path);

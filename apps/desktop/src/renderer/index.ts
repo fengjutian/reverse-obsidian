@@ -201,13 +201,18 @@ async function refreshNotes() {
 
 async function openNote(path: string) {
   activePath = path;
-  const content = await window.ekm.readNote(path);
-  if (notePathInput) notePathInput.value = path;
-  if (markdownEditor) {
-    markdownEditor.setValue(content);
+  try {
+    const content = await window.ekm.readNote(path);
+    if (notePathInput) notePathInput.value = path;
+    if (markdownEditor) {
+      markdownEditor.setValue(content);
+    }
+    await Promise.all([refreshPreview(), refreshBacklinks(path)]);
+    renderTree();
+  } catch (error) {
+    console.error("Failed to open note:", error);
+    alert(`Failed to open note: ${error}`);
   }
-  await Promise.all([refreshPreview(), refreshBacklinks(path)]);
-  renderTree();
 }
 
 async function saveNote() {
@@ -218,9 +223,14 @@ async function saveNote() {
   }
 
   const content = markdownEditor?.getValue() ?? "";
-  await window.ekm.writeNote(path, content);
-  activePath = path;
-  await Promise.all([refreshNotes(), refreshPreview(), refreshBacklinks(path)]);
+  try {
+    await window.ekm.writeNote(path, content);
+    activePath = path;
+    await Promise.all([refreshNotes(), refreshPreview(), refreshBacklinks(path)]);
+  } catch (error) {
+    console.error("Failed to save note:", error);
+    alert(`Failed to save note: ${error}`);
+  }
 }
 
 async function createNote(path: string, initialContent?: string) {
@@ -229,9 +239,14 @@ async function createNote(path: string, initialContent?: string) {
   const mdPath = cleaned.endsWith(".md") ? cleaned : `${cleaned}.md`;
   const title = mdPath.split("/").pop() ?? "Untitled";
   const content = initialContent ?? `# ${title.replace(/\.md$/, "")}\n\n`;
-  await window.ekm.writeNote(mdPath, content);
-  await refreshNotes();
-  await openNote(mdPath);
+  try {
+    await window.ekm.writeNote(mdPath, content);
+    await refreshNotes();
+    await openNote(mdPath);
+  } catch (error) {
+    console.error("Failed to create note:", error);
+    alert(`Failed to create note: ${error}`);
+  }
 }
 
 async function refreshPreview() {
